@@ -63,6 +63,14 @@ class LoadImageFromFile(object):
             img_bytes, flag=self.color_type, backend=self.imdecode_backend)
         if self.to_float32:
             img = img.astype(np.float32)
+        
+        # depth_name = results['depth_info']['depth']
+        depth_name = filename.replace('.jpg', '.npy')
+        
+        depth = np.load(depth_name)
+        depth = np.expand_dims(depth, axis=2)
+
+        img = np.concatenate((img, depth), axis=2)
 
         results['filename'] = filename
         results['ori_filename'] = results['img_info']['filename']
@@ -72,7 +80,9 @@ class LoadImageFromFile(object):
         # Set initial values for default meta_keys
         results['pad_shape'] = img.shape
         results['scale_factor'] = 1.0
-        num_channels = 1 if len(img.shape) < 3 else img.shape[2]
+        # num_channels = 1 if len(img.shape) < 3 else img.shape[2]
+        num_channels = 4
+
         results['img_norm_cfg'] = dict(
             mean=np.zeros(num_channels, dtype=np.float32),
             std=np.ones(num_channels, dtype=np.float32),

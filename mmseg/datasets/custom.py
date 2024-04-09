@@ -168,11 +168,15 @@ class CustomDataset(Dataset):
                     list_dir=False,
                     suffix=img_suffix,
                     recursive=True):
-                img_info = dict(filename=img)
-                if ann_dir is not None:
-                    seg_map = img.replace(img_suffix, seg_map_suffix)
-                    img_info['ann'] = dict(seg_map=seg_map)
-                img_infos.append(img_info)
+                if img.endswith('.jpg'):
+                    img_info = dict(filename=img)
+                    depth = img.replace('.jpg', '.npy')
+                    img_info['depth'] = dict(depth=depth)
+                    if ann_dir is not None:
+                        # seg_map = img.replace(img_suffix, seg_map_suffix)
+                        seg_map = img.replace('.jpg', '.png').replace('images', 'annotations')
+                        img_info['ann'] = dict(seg_map=seg_map)
+                    img_infos.append(img_info)
             img_infos = sorted(img_infos, key=lambda x: x['filename'])
 
         print_log(f'Loaded {len(img_infos)} images', logger=get_root_logger())
@@ -190,6 +194,10 @@ class CustomDataset(Dataset):
 
         return self.img_infos[idx]['ann']
 
+    def get_depth_info(self, idx):
+
+        return self.img_infos[idx]['depth']
+    
     def pre_pipeline(self, results):
         """Prepare results dict for pipeline."""
         results['seg_fields'] = []
@@ -227,7 +235,8 @@ class CustomDataset(Dataset):
 
         img_info = self.img_infos[idx]
         ann_info = self.get_ann_info(idx)
-        results = dict(img_info=img_info, ann_info=ann_info)
+        depth_info = self.get_depth_info(idx)
+        results = dict(img_info=img_info, ann_info=ann_info, depth_info=depth_info)
         self.pre_pipeline(results)
         return self.pipeline(results)
 
@@ -243,7 +252,8 @@ class CustomDataset(Dataset):
         """
 
         img_info = self.img_infos[idx]
-        results = dict(img_info=img_info)
+        depth_info = self.get_depth_info(idx)
+        results = dict(img_info=img_info, depth_info=depth_info)
         self.pre_pipeline(results)
         return self.pipeline(results)
 

@@ -475,9 +475,13 @@ class Normalize(object):
             dict: Normalized results, 'img_norm_cfg' key is added into
                 result dict.
         """
-
-        results['img'] = mmcv.imnormalize(results['img'], self.mean, self.std,
-                                          self.to_rgb)
+        depth = results['img'][:,:,-1]
+        # print(results['img'].shape)
+        
+        results['img'] = mmcv.imnormalize(results['img'][:,:,:-1], self.mean, self.std, self.to_rgb)
+        # print(results['img'].shape)
+        depth = np.expand_dims(depth, axis=2)
+        results['img'] = np.concatenate((results['img'], depth), axis=2)
         results['img_norm_cfg'] = dict(
             mean=self.mean, std=self.std, to_rgb=self.to_rgb)
         return results
@@ -913,6 +917,10 @@ class PhotoMetricDistortion(object):
 
     def saturation(self, img):
         """Saturation distortion."""
+        # print('x', img.shape)
+        # depth = img[:,:,-1]
+        # img = img[:,:,:-1]
+
         if random.randint(2):
             img = mmcv.bgr2hsv(img)
             img[:, :, 1] = self.convert(
@@ -920,6 +928,9 @@ class PhotoMetricDistortion(object):
                 alpha=random.uniform(self.saturation_lower,
                                      self.saturation_upper))
             img = mmcv.hsv2bgr(img)
+
+        # depth = np.expand_dims(depth, axis=2)
+        # img = np.concatenate((img, depth), axis=2)
         return img
 
     def hue(self, img):
@@ -941,26 +952,35 @@ class PhotoMetricDistortion(object):
         Returns:
             dict: Result dict with images distorted.
         """
-
-        img = results['img']
+        
+        img = results['img'][:,:,:-1]
+        depth = results['img'][:,:,-1]
+        # print('1', img.shape)
         # random brightness
         img = self.brightness(img)
+        # print('2', img.shape)
 
         # mode == 0 --> do random contrast first
         # mode == 1 --> do random contrast last
         mode = random.randint(2)
         if mode == 1:
             img = self.contrast(img)
-
+        # print('3', img.shape)
         # random saturation
         img = self.saturation(img)
-
+        # print('4', img.shape)
         # random hue
         img = self.hue(img)
-
+        # print('5', img.shape)
         # random contrast
         if mode == 0:
             img = self.contrast(img)
+        # print('6', img.shape)
+
+        depth = np.expand_dims(depth, axis=2)
+
+        # print('6', depth.shape)
+        img = np.concatenate((img, depth), axis=2)
 
         results['img'] = img
         return results
